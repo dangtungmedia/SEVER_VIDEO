@@ -13,7 +13,7 @@ templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # ✅ Sửa đường dẫn root nếu muốn lưu ở ổ lớn (ví dụ /mnt/data/media)
-UPLOAD_ROOT = Path("/mnt/data/media")
+UPLOAD_ROOT = Path("media")
 UPLOAD_DIRS = {
     "content": UPLOAD_ROOT / "content",
     "reupload": UPLOAD_ROOT / "reupload"

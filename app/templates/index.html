@@ -256,7 +256,7 @@
         formData.append('target', targetTab);
 
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/upload', true);
+        xhr.open('POST', '/upload/', true);
 
         xhr.upload.onprogress = function (event) {
             if (event.lengthComputable) {
