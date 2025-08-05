@@ -12,8 +12,8 @@ services:
             - web_network
             - app_network
 
-    nginx:
-        container_name: web_tung
+    web_video_nginx:
+        container_name: web_video_nginx
         restart: always
         image: nginx:latest
         ports:
