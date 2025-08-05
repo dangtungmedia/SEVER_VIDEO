@@ -17,7 +17,7 @@ services:
         restart: always
         image: nginx:latest
         ports:
-            - "5085:5085"  # ✅ ánh xạ 5085 từ host → 80 trong container
+            - "5080:5080"  # ✅ ánh xạ 5085 từ host → 80 trong container
         volumes:
             - ./nginx:/etc/nginx/conf.d
         networks:
