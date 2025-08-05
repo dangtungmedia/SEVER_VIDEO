@@ -1,0 +1,37 @@
+services:
+    web_upstream:
+        container_name: web_upstream
+        restart: always
+        build: .
+        volumes:
+            - .:/app
+            - ./media:/mnt/data/media/
+        command: uvicorn app.main:app --host 0.0.0.0 --port 5005 --reload
+        networks:
+            - db_network
+            - web_network
+            - app_network
+
+    nginx:
+        container_name: web_tung
+        restart: always
+        image: nginx:latest
+        ports:
+            - "5085:5085"  # ✅ ánh xạ 5085 từ host → 80 trong container
+        volumes:
+            - ./nginx:/etc/nginx/conf.d
+        networks:
+            - web_network
+            - db_network
+            - app_network
+volumes:
+    media_volume:
+        driver: local
+
+networks:
+    db_network:
+        driver: bridge
+    web_network:
+        driver: bridge
+    app_network:
+        driver: bridge
