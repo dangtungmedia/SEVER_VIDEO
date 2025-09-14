@@ -17,3 +17,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Làm việc trong thư mục /app
 WORKDIR /app
+

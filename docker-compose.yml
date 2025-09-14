@@ -5,7 +5,6 @@ services:
         build: .
         volumes:
             - .:/app
-            - ./media:/mnt/data/media/
         command: uvicorn app.main:app --host 0.0.0.0 --port 5005 --reload
         networks:
             - db_network
@@ -19,6 +18,7 @@ services:
         ports:
             - "5080:5080"  # ✅ ánh xạ 5085 từ host → 80 trong container
         volumes:
+            - ./media:/app/media
             - ./nginx:/etc/nginx/conf.d
         networks:
             - web_network

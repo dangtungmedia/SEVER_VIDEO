@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 import json
 from datetime import datetime
@@ -9,24 +10,18 @@ from pathlib import Path
 
 app = FastAPI()
 
+MEDIA_ROOT = Path("/app/media")
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+
 templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-# ✅ Sửa đường dẫn root nếu muốn lưu ở ổ lớn (ví dụ /mnt/data/media)
-UPLOAD_ROOT = Path("/mnt/data/media/")
-UPLOAD_DIRS = {
-    "content": UPLOAD_ROOT / "content",
-    "reupload": UPLOAD_ROOT / "reupload"
-}
-METADATA_FILE = Path("data.json") 
+# Serve file tĩnh tại /media (có hỗ trợ Range header để tua video)
+app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
 
-# ✅ Tạo thư mục nếu chưa có
-for path in UPLOAD_DIRS.values():
-    path.mkdir(parents=True, exist_ok=True)
-
-# ✅ Tạo file metadata nếu chưa có
+METADATA_FILE = Path("data.json")
 if not METADATA_FILE.exists():
-    METADATA_FILE.write_text(json.dumps({"content": [], "reupload": []}, indent=2))
+    METADATA_FILE.write_text(json.dumps({"content": [], "reupload": []}, indent=2, ensure_ascii=False))
 
 @app.get("/", response_class=HTMLResponse)
 async def homepage(request: Request):
@@ -34,29 +29,43 @@ async def homepage(request: Request):
 
 @app.post("/upload/")
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
-    target: str = Form(...)
+    target: str = Form(...),
 ):
+    UPLOAD_DIRS = {
+        "content": MEDIA_ROOT / "content",
+        "reupload": MEDIA_ROOT / "reupload",
+    }
+
     if target not in UPLOAD_DIRS:
-        return JSONResponse(status_code=400, content={"error": "Invalid target folder!"})
+        return JSONResponse(status_code=400, content={"error": "Invalid target folder! (content|reupload)"})
 
-    # ✅ Lưu file vào thư mục tương ứng
     dest_folder = UPLOAD_DIRS[target]
+    dest_folder.mkdir(parents=True, exist_ok=True)
+
+    # Lưu file
     dest_path = dest_folder / file.filename
-
     with open(dest_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
+        f.write(await file.read())
 
-    # ✅ Cập nhật metadata
+    # Cập nhật metadata
     metadata = {
         "filename": file.filename,
         "saved_path": str(dest_path),
-        "upload_time": datetime.now().isoformat()
+        "target": target,
+        "upload_time": datetime.now().isoformat(),
+    }
+    db = json.loads(METADATA_FILE.read_text() or '{"content":[],"reupload":[]}')
+    db[target].append(metadata)
+    METADATA_FILE.write_text(json.dumps(db, indent=2, ensure_ascii=False))
+
+    # Trả về URL xem trực tiếp (không cần giao diện)
+    file_url = str(request.base_url).rstrip("/") + f"/media/{target}/{file.filename}"
+    return {
+        "message": "Upload thành công",
+        "target": target,
+        "filename": file.filename,
+        "url": file_url
     }
 
-    data = json.loads(METADATA_FILE.read_text())
-    data[target].append(metadata)
-    METADATA_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
-
-    return {"message": "Upload thành công", "target": target, "filename": file.filename}
